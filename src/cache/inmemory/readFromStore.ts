@@ -20,7 +20,6 @@ import {
   getDefaultValues,
   getFragmentDefinitions,
   getMainDefinition,
-  getQueryDefinition,
   mergeDeepArray,
   getFragmentFromSelection,
   maybeDeepFreeze,
@@ -219,15 +218,18 @@ export class StoreReader {
     canonizeResults = true,
   }: DiffQueryAgainstStoreOptions): Cache.DiffResult<T> {
     const policies = this.config.cache.policies;
+    const mainDef = getMainDefinition(query);
 
-    variables = {
-      ...getDefaultValues(getQueryDefinition(query)),
-      ...variables!,
-    };
+    if (mainDef.kind === "OperationDefinition") {
+      variables = {
+        ...getDefaultValues(mainDef),
+        ...variables!,
+      };
+    }
 
     const rootRef = makeReference(rootId);
     const execResult = this.executeSelectionSet({
-      selectionSet: getMainDefinition(query).selectionSet,
+      selectionSet: mainDef.selectionSet,
       objectOrReference: rootRef,
       enclosingRef: rootRef,
       context: {
