@@ -10,6 +10,7 @@ import {
   ObservableSubscription,
   isNonEmptyArray,
   graphQLResultHasError,
+//  cloneDeep,
   canUseWeakMap,
 } from '../utilities';
 import {
@@ -172,10 +173,9 @@ export class QueryInfo {
     diff: Cache.DiffResult<any> | null,
     options?: Cache.DiffOptions,
   ) {
-    this.lastDiff = diff ? {
-      diff,
-      options: options || this.getDiffOptions(),
-    } : void 0;
+    this.lastDiff = diff
+      ? { diff, options: options || this.getDiffOptions() }
+      : void 0;
   }
 
   private getDiffOptions(variables = this.variables): Cache.DiffOptions {
@@ -222,6 +222,7 @@ export class QueryInfo {
         // request, and we don't want to trigger network requests for
         // optimistic updates.
         if (this.getDiff().fromOptimisticTransaction) {
+          // XXX make ObservableQuery.observe public if we want to call it here.
           oq["observe"]();
         } else {
           oq.reobserve();
@@ -346,6 +347,24 @@ export class QueryInfo {
     this.reset();
 
     if (options.fetchPolicy === 'no-cache') {
+      if (result.path) {
+        let diff = this.lastDiff;
+        if (!diff) {
+          throw new Error('SOMETHING PATH PASSED WITHOUT A THINGY TODO TKTKTK');
+        }
+
+        //diff = cloneDeep(diff);
+        setIn(
+          diff.diff.result,
+          result.path as Array<string | number>,
+          (value: any) => ({...value, ...result.data}),
+        );
+        this.setDiff(diff.diff);
+        //this.dirty = true;
+        //this.notify();
+        result.data = diff.diff.result;
+      }
+
       this.updateLastDiff(
         { result: result.data, complete: true },
         this.getDiffOptions(options.variables),
@@ -466,4 +485,24 @@ export function shouldWriteResult<T>(
     writeWithErrors = true;
   }
   return writeWithErrors;
+}
+
+function setIn(
+  obj: Record<string, any>,
+  path: Array<string | number>,
+  updater: Function,
+) {
+  if (!path.length) {
+    return obj;
+  }
+
+  let parent: any = obj;
+  for (let i = 0; i < path.length - 1; i++) {
+    const key = path[i];
+    parent = parent[key];
+  }
+
+  const key = path[path.length - 1];
+  parent[key] = updater(parent[key]);
+  return obj;
 }
