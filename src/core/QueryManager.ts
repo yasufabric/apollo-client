@@ -1307,7 +1307,7 @@ export class QueryManager<TStore> {
     ) => {
       const data = diff.result;
 
-      if (process.env.NODE_ENV !== 'production' &&
+      if (__DEV__ &&
           isNonEmptyArray(diff.missing) &&
           !equal(data, {}) &&
           !returnPartialData) {
@@ -1464,7 +1464,7 @@ function getQueryIdsForQueryDescriptor<TStore>(
     // pre-allocate a new query ID here.
     queryIds.push(qm.generateQueryId());
   }
-  if (process.env.NODE_ENV !== "production" && !queryIds.length) {
+  if (__DEV__ && !queryIds.length) {
     invariant.warn(`Unknown query name ${
       JSON.stringify(desc)
     } passed to refetchQueries method in options.include array`);
